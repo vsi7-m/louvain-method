@@ -1,0 +1,106 @@
+#lang r7rs
+(define-library (louvain-method)
+  (export louvain detect-communities aggregate degrees modularity in-community-degree) ; DO NOT CHANGE THIS LINE
+  (import (scheme base)
+          (scheme write)
+          (scheme cxr)
+          (prefix (a-d graph weighted with-self-loops config) g:)
+          (prefix (a-d dictionary ordered avl) avl:))
+  (begin
+
+    ;;;; MANDATORY Auxiliary procedures 
+
+    ; degrees (weighted-graph -> vector<number>)
+    ; Returns a node-indexed vector containing the degree of each node of a weighted graph
+    (define (degrees graph)
+      (let ((degree (make-vector (g:order graph) 0))) 
+        (g:for-each-node graph 
+                         (lambda (node) 
+                           (let ((total 0)) 
+                             (g:for-each-edge graph node (lambda (weight to)
+                                                           (set! total (+ total weight)))) 
+                             (vector-set! degree node total)))) 
+        degree))
+
+    ; modularity (weighted-graph vector<community-id> -> number)
+    ; General formula to calculate modularity in a weighted graph given its communities
+ 
+    (define (modularity graph communities)
+      (let* ((degree (degrees graph))
+             (W (apply + (vector->list degree)))
+             (Q 0))
+        (g:for-each-node graph
+                         (lambda (i)
+                           (g:for-each-node graph 
+                                            (lambda (j)
+                                              (let ((ki (vector-ref degree i))
+                                                    (kj (vector-ref degree j))
+                                                    (wij  (g:weight graph i j)))
+                                                (if (= (vector-ref communities i)     
+                                                       (vector-ref communities j))
+                                                    (set! Q (+ Q (- 
+                                                                  (if (g:adjacent? graph i j) ; YAAAAAYY
+                                                                      wij
+                                                                      0)
+                                                                  (/ (* ki kj) W))))))))))
+        (/ Q W)))
+                                                                      
+
+    ; in-community-degree (weighted-graph vector<community-id> number community-id -> number)
+    ; Procedure to calculate the sum of weights of edges from a specific node leading to other nodes in a specific community.
+    (define (in-community-degree graph communities node comm-id)
+      (let ((total 0))
+        (g:for-each-edge graph node
+                         (lambda (weight to)
+                           (if (= (vector-ref communities to) comm-id)
+                               (set! total (+ total weight)))))
+        total))
+
+
+    ;;;; PHASE 1: Modularity Optimization
+
+    ; detect-communities (weighted-graph -> {number, vector<community-id>, dictionary<community-id, number>} )
+    ; Assigns nodes of a weighted graph to a community by optimizing modularity.
+    ; Returns a list containing:
+    ;     (1) the amount of improvement in modularity that was made;
+    ;     (2) a node-indexed vector of community id's;
+    ;     (3) a dictionary mapping communities to their internal degree 
+    (define (detect-communities graph)
+      (let* ((n (g:order graph))
+             (communities (make-vector n))
+             (degree (degrees graph))
+             (W (/ (apply + (vector->list degree) 2)))
+             (intra-degrees (avl:new = <)))
+        (g:for-each-node graph
+                         (lambda (i) 
+                           (vector-set! communities i i)
+                           (set! intra-degrees
+                                 (avl:insert! intra-degrees i (vector-ref degree i)))))))
+
+    ;;;; PHASE 2: Community Aggregation
+ 
+    ; aggregate (weighted-graph vector<community-id> dictionary<community-id, number> -> weighted-graph)
+    ; Generates the aggregated weighted graph given:
+    ;     (1) a weighted graph;
+    ;     (2) a node-indexed vector of its communities;
+    ;     (3) a dictionary mapping communities to their intra-degree 
+    (define (aggregate graph communities sigma-ins)
+      (error "aggregate: This has not been implemented yet."))
+
+    ;;;; The top-level structure of the Louvain Method
+
+    ; DO NOT CHANGE THIS PROCEDURE
+    (define (louvain graph)
+      (let iter ((hierarchy '())
+                 (current-graph graph))
+        (let* ((first-phase (detect-communities current-graph))
+               (improvement (car first-phase))
+               (communities (cadr first-phase))
+               (sigma-ins (caddr first-phase)))
+          (if (> improvement 0) ; As long as we can improve modularity, we continue
+              (iter (cons (cons current-graph communities)
+                          hierarchy)
+                    (aggregate current-graph communities sigma-ins))
+              (cons (cons current-graph communities)
+                    hierarchy)))))
+    ))

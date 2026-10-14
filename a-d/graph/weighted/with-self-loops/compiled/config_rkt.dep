@@ -1,0 +1,1 @@
+("8.10" ta6osx ("a65b7cacfca8da5aa219e03106e4da3ef7c701cf" . "74f54425e03daf9e0b65ef7e9013c25d433d39a0") (collects #"a-d" #"graph" #"weighted" #"with-self-loops" #"adjacency-list.rkt") (collects #"r7rs" #"base.rkt") (collects #"r7rs" #"lang" #"reader.rkt") (collects #"r7rs" #"main.rkt") (collects #"racket" #"base.rkt") (collects #"racket" #"runtime-config.rkt"))
